@@ -38,6 +38,6 @@ include Comparable
   end
 
   def +(card)
-    value + card.value
+    @value + card.value
   end
 end

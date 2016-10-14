@@ -6,28 +6,47 @@ class BlackJack
 
   attr_accessor :dealer,
                 :player,
-                :deck
+                :dealer_score,
+                :player_score,
+                :game_counter,
+                :deck,
+                :shoe
 
   def initialize
     puts "Let's play a game of Black Jack."
     self.deck = Deck.new
+    self.shoe = []
+    7.times do self.shoe = deck end
     self.dealer = []
     self.player = []
-    self.deck.shuffle!
+    self.shoe.shuffle!
+    self.dealer_score = 0
+    self.player_score = 0
+    self.game_counter = 0
+  end
+
+  def continue
+    self.dealer = []
+    self.player = []
+    play_hand
   end
 
   def play_hand
+    self.game_counter += 1
     deal_hand
     reveal_cards
+    blackjack(dealer, "Dealer") if blackjack?(dealer)
     player_turn
     dealer_turn
     score_hand
   end
 
+# Game Mechanics
+
   def deal_hand
     2.times do
-      self.dealer << deck.deal
-      self.player << deck.deal
+      self.dealer << shoe.deal
+      self.player << shoe.deal
     end
   end
 
@@ -36,52 +55,13 @@ class BlackJack
     puts "Player has #{hand_simplified(player)}"
   end
 
+# Player Logic
+
   def player_turn
-    catch (:stand) do
-      until bust?(player, "Player") || blackjack?(player, "Player")
-        hit_choice
-      end
-    end
-  end
-
-  def dealer_turn
-    until bust?(dealer, "Dealer") || blackjack?(dealer, "Dealer")
-      while dealer_hit?
-        dealer_hit
-      end
-    end
-  end
-
-  def bust?(hand, who)
-    if hand.inject(:+) <= 21
-      false
-    else
-      puts "#{who} has busted with #{hand_simplified(hand)}."
-      if who == "dealer"; puts "Player wins!" else puts "Dealer wins!" end
-      play_again
-      true
-    end
-  end
-
-  def blackjack?(hand, who)
-    if hand.inject(:+) == 21 && hand.length == 2
-      puts "#{who} won with a Black Jack!"
-      play_again
-      true
-    else
-      false
-    end
-  end
-
-  def dealer_hit?
-    dealer.inject(:+) <= 16
-  end
-
-  def dealer_hit
-    puts "Dealer will hit."
-    self.dealer << deck.deal
-    reveal_cards
-    dealer_turn
+    busted(player, "Player") if bust?(player)
+    blackjack(player "Player") if blackjack?(player)
+    player_ace(player)
+    hit_choice
   end
 
   def hit_choice
@@ -90,8 +70,7 @@ class BlackJack
     if response == "hit"
       player_hit
     elsif response == "stand"
-      puts "The player will stand with #{hand_simplified(player)}"
-      throw :stand
+      player_stand
     else
       puts "It\'s not that kind of game."
       hit_choice
@@ -100,9 +79,182 @@ class BlackJack
 
   def player_hit
     puts "Player will hit."
-    self.player << deck.deal
+    self.player << shoe.deal
     reveal_cards
+    lucky(player, "Player") if three_legged_rabbit?(player)
+    busted(player, "Player") if bust?(player)
+    player_ace(player)
+    hit_choice
   end
+
+  def player_stand
+    puts "The player will stand with #{hand_simplified(player)}"
+    dealer_turn
+  end
+
+  def player_ace(player)
+    player.each do |card|
+      while card.face == "A"
+        puts "Would you like this Ace to be worth 1 or 11?"
+        response = gets.chomp
+        if response == 1
+          card.value = 1
+        else
+          card.value = 11
+        end
+      end
+    end
+    hit_choice
+  end
+
+# Dealer Logic
+
+  def dealer_turn
+    dealer_ace(dealer)
+    busted(dealer, "Dealer") if bust?(dealer)
+    blackjack(dealer, "Dealer") if blackjack?(dealer)
+    dealer_hit if dealer_hit?
+    dealer_stand
+  end
+
+  def dealer_hit?
+    if dealer.inject(:+) <= 16
+      true
+    else
+      false
+    end
+  end
+
+  def dealer_hit
+    puts "Dealer will hit."
+    self.dealer << shoe.deal
+    reveal_cards
+    dealer_turn
+  end
+
+  def dealer_stand
+    puts "Dealer will stand."
+    score_hand
+  end
+
+  def dealer_ace(dealer)
+    dealer.each do |card|
+      while card.face == "A" && dealer.inject(:+) >= 15
+        card.value = 1
+      end
+    end
+  end
+
+# Conditionals
+
+  def blackjack?(hand)
+    if hand.inject(:+) == 21 && hand.length == 2
+      true
+    else
+      false
+    end
+  end
+
+  def blackjack(hand, who)
+    score_win(who)
+    puts "#{who} won with a Black Jack!"
+    puts "Dealer had #{hand_simplified(dealer)}. Player had #{hand_simplified(player)}."
+    play_again
+  end
+
+  def bust?(hand)
+    if hand.inject(:+) <= 21
+      false
+    else
+      true
+    end
+  end
+
+  def busted(hand, who)
+    puts "#{who} has busted with #{hand_simplified(hand)}."
+    score_loss(who)
+    if who == "Dealer"; puts "Player wins!" else puts "Dealer wins!" end
+    play_again
+  end
+
+  def three_legged_rabbit?(hand)
+    if hand.length >= 6
+      true
+    else
+      false
+    end
+  end
+
+  def lucky(hand, who)
+    puts "Six card hand wins!"
+    score_win(who)
+  end
+
+# Score/Win Logic
+
+  def dealer_win
+    puts "Dealer wins with #{hand_simplified(dealer)}. Player had #{hand_simplified(player)}"
+  end
+
+  def player_win
+    puts "Player wins with #{hand_simplified(player)}. Dealer had #{hand_simplified(dealer)}"
+  end
+
+  def score_hand
+    if hand_strength(dealer) > hand_strength(player)
+      dealer_win
+    elsif hand_strength(dealer) < hand_strength(player)
+      player_win
+    else
+      puts "Tie score, higher hand count wins."
+      if player.length >= dealer.length
+        player_win
+      else
+        dealer_win
+      end
+    end
+    play_again
+  end
+
+  def score_loss(who)
+    if who == "Dealer"
+      self.player_score += 1
+    else
+      self.dealer_score += 1
+    end
+    play_again
+  end
+
+  def score_win(who)
+    if who == "Dealer"
+      dealer_score += 1
+    else
+      player_score += 1
+    end
+    play_again
+  end
+
+  def play_again
+    puts "Would you like to play again? (y/n)"
+    response = gets.chomp.downcase
+    if response == "y"
+      continue
+    else
+      if player_score >= 2*dealer_score
+        puts "We have some questions for you. This way please."
+      elsif player_score >= dealer_score
+        puts "Well done."
+      elsif 2*player_score < dealer_score
+        puts "You're technically property of the casino, now."
+      else
+        puts "Come back soon!"
+      end
+      puts "Thanks for playing. You won #{player_score} games. The house won #{dealer_score} games."
+      exit
+    end
+  end
+
+# Data Manipulators
 
   def hand_strength(hand)
     hand.inject(:+)
@@ -111,28 +263,6 @@ class BlackJack
   def hand_simplified(hand)
     hand = hand.collect
     hand.each { |card| card.to_s }.join(", ")
-  end
-
-  def score_hand
-    if hand_strength(dealer) > hand_strength(player)
-      puts "Dealer wins with #{hand_simplified(dealer)}. Player had #{hand_simplified(player)}"
-    elsif hand_strength(dealer) < hand_strength(player)
-      puts "Player wins with #{hand_simplified(player)}. Dealer had #{hand_simplified(dealer)}"
-    else
-      puts "We have a tie. Dealer had #{hand_simplified(dealer)}. Player had #{hand_simplified(player)}"
-    end
-  end
-
-  def play_again
-    puts "Would you like to play again? (y/n)"
-    response = gets.chomp.downcase
-    if response == "y"
-      initialize
-      play_hand
-    else
-      puts "Thanks for playing"
-      exit
-    end
   end
 
 end
