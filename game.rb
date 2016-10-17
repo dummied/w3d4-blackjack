@@ -1,4 +1,5 @@
 require_relative "deck"
+# require_relative "advisor"
 require "pry"
 
 
@@ -6,11 +7,16 @@ class BlackJack
 
   attr_accessor :dealer,
                 :player,
+                # :advisor,
                 :dealer_score,
                 :player_score,
                 :game_counter,
                 :deck,
                 :shoe
+
+  # def self.dealer_show
+  #   dealer.hand_simplified.drop(1)
+  # end
 
   def initialize
     puts "Let's play a game of Black Jack."
@@ -25,12 +31,6 @@ class BlackJack
     self.game_counter = 0
   end
 
-  def continue
-    self.dealer = []
-    self.player = []
-    play_hand
-  end
-
   def play_hand
     self.game_counter += 1
     deal_hand
@@ -40,6 +40,17 @@ class BlackJack
     dealer_turn
     score_hand
   end
+
+  def continue
+    self.dealer = []
+    self.player = []
+    play_hand
+  end
+
+  # def advice
+  #   self.advisor = Advisor.new(player, dealer)
+  #   puts advisor.output
+  # end
 
 # Game Mechanics
 
@@ -58,49 +69,51 @@ class BlackJack
 # Player Logic
 
   def player_turn
-    busted(player, "Player") if bust?(player)
     blackjack(player "Player") if blackjack?(player)
     player_ace(player)
+    busted(player, "Player") if bust?(player)
     hit_choice
   end
 
   def hit_choice
     puts "Would you like another card ('hit'), or to keep your current hand ('stand')?"
+    # puts "Press 'i' for a hint."
     response = gets.chomp.downcase
     if response == "hit"
       player_hit
     elsif response == "stand"
       player_stand
+    # elsif response == "i"
+    #   advice
     else
       puts "It\'s not that kind of game."
-      hit_choice
     end
+    player_turn
   end
 
   def player_hit
     puts "Player will hit."
     self.player << shoe.deal
     reveal_cards
-    lucky(player, "Player") if three_legged_rabbit?(player)
-    busted(player, "Player") if bust?(player)
-    player_ace(player)
-    hit_choice
+    player_turn
   end
 
   def player_stand
     puts "The player will stand with #{hand_simplified(player)}"
+    busted(player, "Player") if bust?(player)
+    blackjack(player "Player") if blackjack?(player)
     dealer_turn
   end
 
   def player_ace(player)
     player.each do |card|
-      while card.face == "A"
+      if card.face == "A"
         puts "Would you like this Ace to be worth 1 or 11?"
         response = gets.chomp
         if response == 1
-          card.value = 1
+          self.card.value = 1
         else
-          card.value = 11
+          self.card.value = 11
         end
       end
     end
@@ -163,10 +176,10 @@ class BlackJack
   end
 
   def bust?(hand)
-    if hand.inject(:+) <= 21
-      false
-    else
+    if hand.inject(:+) >= 22
       true
+    else
+      false
     end
   end
 
@@ -227,11 +240,11 @@ class BlackJack
 
   def score_win(who)
     if who == "Dealer"
-      dealer_score += 1
+      self.dealer_score += 1
     else
-      player_score += 1
+      self.player_score += 1
     end
-    play_again
+      play_again
   end
 
   def play_again
