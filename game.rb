@@ -111,9 +111,9 @@ class BlackJack
         puts "Would you like this Ace to be worth 1 or 11?"
         response = gets.chomp
         if response == 1
-          self.card.value = 1
+          card.value = 1
         else
-          self.card.value = 11
+          card.value = 11
         end
       end
     end
