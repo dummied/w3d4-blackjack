@@ -261,8 +261,7 @@ class BlackJack
   end
 
   def hand_simplified(hand)
-    hand = hand.collect
-    hand.each { |card| card.to_s }.join(", ")
+    hand.collect { |card| card.to_s }.join(", ")
   end
 
 end
