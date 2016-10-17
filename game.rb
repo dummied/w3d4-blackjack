@@ -131,11 +131,7 @@ class BlackJack
   end
 
   def dealer_hit?
-    if dealer.inject(:+) <= 16
-      true
-    else
-      false
-    end
+    dealer.inject(:+) <= 16
   end
 
   def dealer_hit
